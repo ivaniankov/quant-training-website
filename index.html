@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quant Mental Math Trainer</title>
+  <meta name="description" content="Practice mental math for quant interviews: arithmetic, percentages, fractions, roots, and approximations." />
+  <style>
+    :root{
+      --bg:#0b0e14; --panel:#111521; --card:#0f1320; --text:#e9eef7; --muted:#9fb0c3; --brand:#6aa6ff; --good:#21cf86; --bad:#ff6b6b; --ring: rgba(106,166,255,.25);
+    }
+    *{ box-sizing: border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color:var(--text); background: radial-gradient(1200px 700px at 70% -10%, #162033 0%, var(--bg) 60%);
+      display:grid; place-items:center; padding: 24px 12px;
+    }
+    .wrap{ width:min(980px,96vw); }
+    .card{ background: linear-gradient(180deg, var(--panel), var(--card)); border:1px solid #232b37; border-radius:20px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+    header{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:16px 18px; border-bottom:1px solid #1f2733; }
+    header h1{ font-size:20px; margin:0; letter-spacing:.3px; }
+    header .sub{ color:var(--muted); font-size:13px; }
+
+    .main{ display:grid; grid-template-columns: 1.1fr .9fr; gap:16px; padding:16px; }
+    @media (max-width: 860px){ .main{ grid-template-columns: 1fr; } }
+
+    .panel{ background:#0f1622; border:1px solid #1f2735; border-radius:16px; padding:14px; }
+    .panel h2{ margin:4px 0 10px; font-size:15px; color:var(--muted); letter-spacing:.2px; }
+
+    .controls{ display:grid; grid-template-columns: repeat(2,1fr); gap:10px; }
+    .controls .row{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px; border:1px solid #2a3447; background:#0f1521; cursor:pointer; font-size:13px; }
+    .chip input{ accent-color: var(--brand); }
+
+    select, input[type="number"], input[type="text"]{ background:#0c121d; border:1px solid #2a3447; border-radius:10px; color:var(--text); padding:8px 10px; font-size:14px; }
+
+    button{ appearance:none; border:1px solid #2a3447; background:#0f1521; color:var(--text); border-radius:12px; padding:10px 14px; font-weight:700; cursor:pointer; box-shadow:0 0 0 0 var(--ring); transition: box-shadow .15s ease, transform .05s ease; }
+    button:hover{ box-shadow:0 0 0 6px var(--ring); }
+    button:active{ transform: translateY(1px); }
+    .primary{ background: linear-gradient(180deg, #1c263a, #141d2d); border-color:#2a3951; }
+    .good{ border-color:#1e4a34; background: linear-gradient(180deg, #123325, #0c2319); }
+    .bad{ border-color:#4a2323; background: linear-gradient(180deg, #2a1515, #211010); }
+
+    .quiz{ display:grid; gap:12px; }
+    .question{ display:grid; gap:8px; padding:16px; border-radius:14px; border:1px solid #233046; background:linear-gradient(180deg,#11182a,#0c1320); }
+    .prompt{ font-size:20px; font-weight:800; letter-spacing:.2px; }
+    .big{ font-size: clamp(28px, 6vw, 44px); font-weight:900; }
+    .help{ color:var(--muted); font-size:13px; }
+    .answer-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .timer{ height:10px; background:#121923; border:1px solid #223047; border-radius:8px; overflow:hidden; }
+    .bar{ height:100%; width:100%; background: linear-gradient(90deg, #6aa6ff, #9fd0ff); transform-origin:left center; }
+
+    .stats{ display:grid; grid-template-columns: repeat(4,1fr); gap:10px; }
+    .stat{ background:#0f1622; border:1px solid #1f2735; border-radius:12px; padding:10px; }
+    .stat .k{ color:var(--muted); font-size:12px; }
+    .stat .v{ font-size:18px; font-weight:800; margin-top:4px; }
+
+    .kbd{ border:1px solid #2e394b; border-bottom-width:2px; border-radius:6px; padding:2px 6px; font-weight:700; }
+    .footer{ color:var(--muted); font-size:12px; text-align:center; padding:10px 0 16px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <header>
+        <div>
+          <h1>Quant Mental Math Trainer</h1>
+          <div class="sub">Sharpen the quick calcs used in quant interviews. Enter answers fast; press <span class="kbd">Enter</span> to submit.</div>
+        </div>
+        <div class="sub" id="sessionInfo">Ready</div>
+      </header>
+
+      <div class="main">
+        <!-- Left: Quiz -->
+        <section class="panel">
+          <h2>Quiz</h2>
+          <div class="quiz">
+            <div class="timer" aria-label="Time remaining"><div id="bar" class="bar"></div></div>
+            <div class="question">
+              <div id="prompt" class="prompt big">Click Start</div>
+              <div id="help" class="help">Choose topics and difficulty on the right. Interview mode = 10 questions.</div>
+              <div class="answer-row">
+                <input id="input" type="text" inputmode="decimal" placeholder="your answer" autocomplete="off" />
+                <button id="submit" class="primary">Submit (Enter)</button>
+                <button id="skip">Skip</button>
+                <button id="reveal">Reveal</button>
+              </div>
+            </div>
+            <div class="stats">
+              <div class="stat"><div class="k">Correct</div><div id="correct" class="v">0</div></div>
+              <div class="stat"><div class="k">Questions</div><div id="qs" class="v">0</div></div>
+              <div class="stat"><div class="k">Accuracy</div><div id="acc" class="v">—</div></div>
+              <div class="stat"><div class="k">Avg time</div><div id="avgtime" class="v">—</div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right: Controls -->
+        <aside class="panel">
+          <h2>Settings</h2>
+          <div class="controls">
+            <div class="row" style="grid-column:1/-1;">
+              <label>Mode
+                <select id="mode">
+                  <option value="endless">Endless practice</option>
+                  <option value="interview">Interview (10 Q)</option>
+                  <option value="time">Time trial (2 min)</option>
+                </select>
+              </label>
+              <label>Difficulty
+                <select id="difficulty">
+                  <option value="easy">Easy</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="hard">Hard</option>
+                </select>
+              </label>
+              <label>Time per Q (sec)
+                <select id="limit">
+                  <option>10</option>
+                  <option selected>30</option>
+                  <option>45</option>
+                  <option>60</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="row" style="grid-column:1/-1;">
+              <span class="chip"><input id="t_mult" type="checkbox" checked> Multiplication</span>
+              <span class="chip"><input id="t_div" type="checkbox" checked> Division</span>
+              <span class="chip"><input id="t_pct" type="checkbox" checked> Percentages</span>
+              <span class="chip"><input id="t_frac" type="checkbox" checked> Fractions→Decimal</span>
+              <span class="chip"><input id="t_sqrt" type="checkbox" checked> √ Approx</span>
+              <span class="chip"><input id="t_comp" type="checkbox" checked> (1+r%)^n</span>
+              <span class="chip"><input id="t_ln" type="checkbox"> ln(1+x)</span>
+            </div>
+
+            <div class="row" style="grid-column:1/-1; justify-content:space-between;">
+              <div>
+                <button id="start" class="primary">Start session</button>
+                <button id="next">Next</button>
+              </div>
+              <div>
+                <button id="reset">Reset stats</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="footer">Shortcuts: <span class="kbd">Enter</span> submit • <span class="kbd">N</span> next • <span class="kbd">R</span> reveal • <span class="kbd">S</span> skip</div>
+    </div>
+  </div>
+
+  <script>
+  // ===== Utilities =====
+  const $ = (id)=>document.getElementById(id);
+  const randInt = (a,b)=> Math.floor(Math.random()*(b-a+1))+a; // inclusive
+  const sample = (arr)=> arr[Math.floor(Math.random()*arr.length)];
+
+  function parseUserNumber(str){
+    if(!str) return NaN;
+    str = (''+str).trim().replace(/%/g,'');
+    // support simple fractions like 3/8
+    if(str.includes('/')){
+      const [a,b] = str.split('/').map(Number);
+      if(!isFinite(a)||!isFinite(b)||b===0) return NaN;
+      return a/b;
+    }
+    return Number(str);
+  }
+
+  const fmt = (x,dp=3)=>{
+    if(x==null||!isFinite(x)) return '—';
+    const n = Number(x);
+    const s = Math.abs(n) >= 1e6 ? n.toExponential(2) : n.toFixed(dp);
+    return s.replace(/\.0+$/,'').replace(/(\.\d*?)0+$/,'$1');
+  }
+
+  function withinTolerance(user, truth, tol){
+    if(!isFinite(user) || !isFinite(truth)) return false;
+    return Math.abs(user - truth) <= tol;
+  }
+
+  // ===== Question generators =====
+  function genMultiplication(level){
+    let a,b;
+    if(level==='easy'){ a=randInt(6,19); b=randInt(6,12); }
+    else if(level==='hard'){ a=randInt(120,999); b=randInt(12,99); }
+    else { a=randInt(12,99); b=randInt(12,99); }
+    return { prompt:`${a} × ${b} = ?`, answer:a*b, tol:0.0001, tag:'mult' };
+  }
+
+  function genDivision(level){
+    let d,q;
+    if(level==='easy'){ d=randInt(6,12); q=randInt(6,40); }
+    else if(level==='hard'){ d=randInt(13,99); q=randInt(20,99); }
+    else { d=randInt(9,25); q=randInt(10,80); }
+    const n = d*q; // makes integer answers
+    return { prompt:`${n} ÷ ${d} = ?`, answer:q, tol:0.0001, tag:'division' };
+  }
+
+  function genPercent(level){
+    let p,N;
+    if(level==='easy'){
+      p = sample([5,10,12.5,20,25,50]);
+      N = randInt(40,400);
+    } else if(level==='hard'){
+      p = randInt(1,95);
+      N = randInt(125,995);
+    } else { // medium
+      p = sample([7.5,15,17.5,30,35,40,60]);
+      N = randInt(80,600);
+    }
+    const ans = (p/100)*N;
+    // tolerance: within 0.5 of a percent of N, minimum 0.02
+    const tol = Math.max(0.02, 0.005*N);
+    return { prompt:`${p}% of ${N} = ?`, answer:ans, tol, tag:'percent', note:'Enter a number (not %).'};
+  }
+
+  function genFractionToDecimal(level){
+    const bank = [ [1,2],[1,3],[2,3],[1,4],[3,4],[1,5],[2,5],[3,5],[4,5],[1,6],[5,6],[1,7],[2,7],[3,7],[1,8],[3,8],[5,8],[7,8],[1,9],[2,9],[4,9],[5,9],[7,9],[8,9] ];
+    let [a,b] = sample(bank);
+    if(level==='hard'){ [a,b] = [randInt(1,9), randInt(7,19)]; }
+    const dp = (level==='easy')?2:3;
+    return { prompt:`${a}/${b} as a decimal (to ${dp} dp)`, answer:a/b, tol: 0.5*Math.pow(10,-dp), dp, tag:'fraction' };
+  }
+
+  function genSqrt(level){
+    let n;
+    if(level==='easy') n = sample([4,9,16,25,36,49,64,81,100,121,144]);
+    else if(level==='hard') n = randInt(200,999);
+    else n = randInt(50,200);
+    // if perfect square on easy, exact; else ask to 2dp
+    const isPerfect = Number.isInteger(Math.sqrt(n));
+    if(isPerfect && level==='easy'){
+      return { prompt:`√${n} = ?`, answer:Math.sqrt(n), tol:0.0001, tag:'sqrt' };
+    }
+    const dp = 2; const tol = 0.5*Math.pow(10,-dp);
+    return { prompt:`√${n} (to ${dp} dp)`, answer:Math.sqrt(n), tol, dp, tag:'sqrt' };
+  }
+
+  function genCompound(level){
+    // (1 + r%)^n approx to 3 dp
+    const r = (level==='easy')? sample([1,2,5]) : (level==='hard'? randInt(3,12) : randInt(2,8));
+    const n = (level==='easy')? randInt(2,6) : (level==='hard'? randInt(6,15) : randInt(4,10));
+    const truth = Math.pow(1 + r/100, n);
+    return { prompt:`(1 + ${r}%)^${n} (to 3 dp)`, answer: truth, tol: 0.0005, dp:3, tag:'compound', note:'Tip: for small r, (1+r)^n ≈ 1 + nr + n(n-1)r^2/2 with r as decimal.' };
+  }
+
+  function genLn1p(level){
+    const x = (level==='easy')? sample([0.05,0.1,0.2]) : (level==='hard'? (randInt(5,50)/100) : (randInt(3,30)/100));
+    const truth = Math.log(1+x);
+    return { prompt:`ln(1 + ${x}) (to 3 dp)`, answer:truth, tol:0.0005, dp:3, tag:'ln1p', note:'Use ln(1+x) ≈ x - x²/2 + x³/3 for small x.' };
+  }
+
+  const GENERATORS = {
+    mult: genMultiplication,
+    division: genDivision,
+    percent: genPercent,
+    fraction: genFractionToDecimal,
+    sqrt: genSqrt,
+    compound: genCompound,
+    ln: genLn1p,
+  };
+
+  // ===== State =====
+  let cfg = { mode:'endless', difficulty:'medium', limit:30, types:['mult','division','percent','fraction','sqrt','compound'] };
+  let q = null; // current question
+  let startedAt = 0; let timeLeft = cfg.limit; let timer = null;
+  const stats = { correct:0, total:0, times:[], session:0 };
+
+  // ===== UI refs =====
+  const promptEl = $('prompt'); const helpEl = $('help'); const inputEl = $('input');
+  const barEl = $('bar');
+  const correctEl = $('correct'); const qsEl = $('qs'); const accEl = $('acc'); const avgtimeEl = $('avgtime'); const sessionInfo = $('sessionInfo');
+
+  const submitBtn = $('submit'); const nextBtn = $('next'); const startBtn = $('start');
+  const revealBtn = $('reveal'); const skipBtn = $('skip'); const resetBtn = $('reset');
+
+  function readConfig(){
+    cfg.mode = $('mode').value; cfg.difficulty = $('difficulty').value; cfg.limit = Number($('limit').value);
+    const active = [];
+    if($('t_mult').checked) active.push('mult');
+    if($('t_div').checked) active.push('division');
+    if($('t_pct').checked) active.push('percent');
+    if($('t_frac').checked) active.push('fraction');
+    if($('t_sqrt').checked) active.push('sqrt');
+    if($('t_comp').checked) active.push('compound');
+    if($('t_ln').checked) active.push('ln');
+    cfg.types = active.length? active : ['mult'];
+  }
+
+  function startTimer(){
+    timeLeft = cfg.limit; updateBar();
+    clearInterval(timer);
+    timer = setInterval(()=>{
+      timeLeft -= 0.05; updateBar();
+      if(timeLeft <= 0){ clearInterval(timer); revealAnswer(false, true); }
+    }, 50);
+  }
+  function stopTimer(){ clearInterval(timer); }
+  function updateBar(){ const p = Math.max(0,timeLeft)/cfg.limit; barEl.style.transform = `scaleX(${p})`; }
+
+  function newQuestion(){
+    readConfig();
+    const type = sample(cfg.types);
+    if(type==='mult') q = genMultiplication(cfg.difficulty);
+    else if(type==='division') q = genDivision(cfg.difficulty);
+    else if(type==='percent') q = genPercent(cfg.difficulty);
+    else if(type==='fraction') q = genFractionToDecimal(cfg.difficulty);
+    else if(type==='sqrt') q = genSqrt(cfg.difficulty);
+    else if(type==='compound') q = genCompound(cfg.difficulty);
+    else if(type==='ln') q = genLn1p(cfg.difficulty);
+
+    promptEl.textContent = q.prompt;
+    helpEl.textContent = q.note || '';
+    inputEl.value = '';
+    inputEl.focus();
+    startedAt = performance.now();
+    startTimer();
+  }
+
+  function updateStats(correct, t){
+    if(t!=null) stats.times.push(t);
+    if(correct) stats.correct++;
+    stats.total++;
+    const acc = stats.total? (100*stats.correct/stats.total) : 0;
+    const avg = stats.times.length? (stats.times.reduce((a,b)=>a+b,0)/stats.times.length) : 0;
+    correctEl.textContent = stats.correct; qsEl.textContent = stats.total; accEl.textContent = stats.total? `${acc.toFixed(0)}%`:'—'; avgtimeEl.textContent = stats.times.length? `${(avg/1000).toFixed(2)}s`:'—';
+
+    if(cfg.mode==='interview'){
+      sessionInfo.textContent = `Interview: ${stats.total}/10`;
+      if(stats.total>=10){ endSession(); }
+    } else if(cfg.mode==='time'){
+      sessionInfo.textContent = `Time trial: ${Math.max(0,Math.ceil(sessionEnds - performance.now())/1000).toFixed(0)}s left`;
+    } else {
+      sessionInfo.textContent = `Practice on ${cfg.difficulty}`;
+    }
+  }
+
+  function endSession(){
+    stopTimer();
+    promptEl.textContent = `Session complete — ${stats.correct}/${stats.total} correct (${accEl.textContent} accuracy)`;
+    helpEl.textContent = 'Press Start session to try again or choose different topics.';
+  }
+
+  function check(){
+    if(!q) return;
+    const user = parseUserNumber(inputEl.value);
+    const took = performance.now() - startedAt;
+    const ok = withinTolerance(user, q.answer, q.tol);
+
+    if(ok){
+      helpEl.textContent = `✅ Correct in ${(took/1000).toFixed(2)}s`;
+      promptEl.textContent = q.prompt.replace('= ?', `= ${fmt(q.answer, q.dp ?? 3)}`);
+      promptEl.style.color = 'var(--good)';
+      setTimeout(()=>{promptEl.style.color='';}, 800);
+    } else {
+      helpEl.textContent = `❌ Not quite. Correct: ${fmt(q.answer, q.dp ?? 3)} (tolerance ±${q.tol})`;
+      promptEl.style.color = 'var(--bad)';
+      setTimeout(()=>{promptEl.style.color='';}, 800);
+    }
+
+    stopTimer();
+    updateStats(ok, took);
+  }
+
+  function revealAnswer(advance=true, timeUp=false){
+    if(!q) return;
+    const took = performance.now() - startedAt;
+    helpEl.textContent = timeUp? `⏰ Time's up. Correct: ${fmt(q.answer, q.dp ?? 3)}` : `Answer: ${fmt(q.answer, q.dp ?? 3)}`;
+    promptEl.textContent = q.prompt.replace('= ?', `= ${fmt(q.answer, q.dp ?? 3)}`);
+    stopTimer();
+    if(advance) updateStats(false, took);
+  }
+
+  // ===== Controls & Flow =====
+  let sessionEnds = Infinity;
+  function startSession(){
+    readConfig();
+    stats.correct = 0; stats.total = 0; stats.times = []; stats.session++;
+    if(cfg.mode==='time'){ sessionEnds = performance.now() + 2*60*1000; }
+    else sessionEnds = Infinity;
+    sessionInfo.textContent = (cfg.mode==='interview')? 'Interview: 0/10' : (cfg.mode==='time'? 'Time trial started' : `Practice on ${cfg.difficulty}`);
+    newQuestion();
+  }
+
+  function next(){
+    if(cfg.mode==='time' && performance.now() > sessionEnds){ endSession(); return; }
+    newQuestion();
+  }
+
+  // ===== Listeners =====
+  submitBtn.addEventListener('click', check);
+  nextBtn.addEventListener('click', next);
+  startBtn.addEventListener('click', startSession);
+  revealBtn.addEventListener('click', ()=>revealAnswer(true,false));
+  skipBtn.addEventListener('click', ()=>{ updateStats(false, performance.now() - startedAt); next(); });
+  resetBtn.addEventListener('click', ()=>{ stats.correct=0; stats.total=0; stats.times=[]; correctEl.textContent='0'; qsEl.textContent='0'; accEl.textContent='—'; avgtimeEl.textContent='—'; sessionInfo.textContent='Ready'; promptEl.textContent='Click Start'; helpEl.textContent=''; stopTimer(); updateBar(); });
+
+  inputEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); check(); }});
+  document.addEventListener('keydown', (e)=>{
+    if(e.key.toLowerCase()==='n'){ e.preventDefault(); next(); }
+    if(e.key.toLowerCase()==='r'){ e.preventDefault(); revealAnswer(false,false); }
+    if(e.key.toLowerCase()==='s'){ e.preventDefault(); updateStats(false, performance.now() - startedAt); next(); }
+  });
+
+  // Initial
+  updateBar();
+  </script>
+</body>
+</html>
