@@ -1,6 +1,6 @@
-// api/explain.js  — no SDK, detailed error responses
+// api/explain.js — Groq (OpenAI-compatible) via fetch
 export default async function handler(req, res) {
-  // CORS
+  // CORS for your static site
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -12,37 +12,36 @@ export default async function handler(req, res) {
   const { question, userAnswer, correctAnswer, method } = body;
   if (!question) return res.status(400).json({ error: "Missing question" });
 
-  const prompt =
-`You are a quant interview coach. Explain the fastest mental-math path.
+  const prompt = `Explain the fastest mental-math path.
 Question: ${question}
 Candidate's answer: ${userAnswer}
 Correct answer: ${correctAnswer}
-${method ? `Method hint: ${method}` : ""}
-Be concise (4–7 bullets). Include a quick sanity check if useful.`;
+${method ? `Hint: ${method}` : ""} Keep it to 4–7 crisp bullets + a quick sanity check.`;
+
+  const model = "llama-3.3-70b-versatile"; // or "llama-3.1-8b-instant" (cheaper/faster)
 
   try {
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+    const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",          // <- safe choice for chat/completions
+        model,
         messages: [
-          { role: "system", content: "Explain crisply like an interviewer: anchors, rounding checks, patterns." },
+          { role: "system", content: "You are a quant interview coach: concise, stepwise, mental anchors, rounding checks." },
           { role: "user", content: prompt }
         ],
         temperature: 0.2
       })
     });
 
-    const data = await resp.json();
-    if (!resp.ok) {
-      // Bubble the real error up so we can see it in the browser
-      return res.status(resp.status).json({ error: data.error?.message || data });
+    const data = await r.json();
+    if (!r.ok) {
+      return res.status(r.status).json({ error: data.error?.message || data });
     }
-    const text = data.choices?.[0]?.message?.content?.trim() || "No explanation returned.";
+    const text = data.choices?.[0]?.message?.content?.trim() || "No explanation.";
     res.status(200).json({ explanation: text });
   } catch (e) {
     res.status(500).json({ error: `Server error: ${e.message}` });
